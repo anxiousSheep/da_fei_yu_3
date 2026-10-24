@@ -5,5 +5,9 @@
         Title="PetSpike" Height="640" Width="420"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize">
-    <wv2:WebView2 x:Name="webView" />
+    <Grid>
+        <wv2:WebView2 x:Name="webView" />
+        <!-- 角色命中区：Fill=#01000000（alpha=1，肉眼不可见但让 OS 接住）+ 逐像素 OpacityMask -->
+        <Rectangle x:Name="clickCatcher" Fill="#01000000" HorizontalAlignment="Left" VerticalAlignment="Top" Width="0" Height="0" />
+    </Grid>
 </Window>

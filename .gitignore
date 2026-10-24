@@ -13,3 +13,5 @@ obj/
 !test/__baselines__/*.png
 .tmp*
 test/__artifacts__/
+# esbuild 打包产物（由 entry.js + three 源码生成）
+spike-cs/bundle.js
