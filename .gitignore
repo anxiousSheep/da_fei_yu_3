@@ -6,5 +6,8 @@ obj/
 .env*
 *.log
 *.png
+# 视觉回归基线必须入库，否则回归测试形同虚设
+!test/__baselines__/
+!test/__baselines__/*.png
 .tmp*
 test/__artifacts__/
