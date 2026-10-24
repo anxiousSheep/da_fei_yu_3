@@ -3,6 +3,8 @@ dist/
 out/
 bin/
 obj/
+.idea/
+.vs/
 .env*
 *.log
 *.png
