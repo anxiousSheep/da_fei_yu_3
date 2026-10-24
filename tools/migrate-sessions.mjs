@@ -79,23 +79,29 @@ async function migrateOne(sessionDir, newRoot) {
   const frame = zlib.zstdCompressSync(Buffer.from(JSON.stringify(header) + '\n'))
   const next = Buffer.concat([frame, buf.subarray(consumed)])
 
-  const tmp = file + '.migrating'
-  fs.writeFileSync(tmp, next)
-
-  // 回读校验：新文件第一帧必须是新 cwd，且剩余字节未被改动
-  const check = await decodeFirstFrame(fs.readFileSync(tmp))
+  // 先在内存里校验：新内容的第一帧必须是新 cwd，且剩余字节长度未变
+  const check = await decodeFirstFrame(next)
   const checkHeader = JSON.parse(check.text.split('\n')[0])
-  if (checkHeader.cwd !== NEW) throw new Error('回读校验失败：cwd 未写入')
+  if (checkHeader.cwd !== NEW) throw new Error('校验失败：cwd 未写入')
+  if (next.length - check.consumed !== buf.length - consumed) throw new Error('校验失败：后续帧长度不一致')
 
-  const restLen = fs.statSync(tmp).size - check.consumed
-  if (restLen !== buf.length - consumed) throw new Error('回读校验失败：后续帧长度不一致')
+  if (dryRun) return { ok: true, id: header.id, bytes: buf.length }
 
-  if (!dryRun) {
-    fs.renameSync(tmp, file)
+  // 先搬目录，再落盘；任一步失败都回滚，避免半迁移状态
+  const targetDir = path.join(newRoot, path.basename(sessionDir))
+  const targetFile = path.join(targetDir, 'session.v4.jsonl.zstd')
+  const tmp = targetFile + '.migrating'
+  let moved = false
+  try {
     fs.mkdirSync(newRoot, { recursive: true })
-    fs.renameSync(sessionDir, path.join(newRoot, path.basename(sessionDir)))
-  } else {
-    fs.unlinkSync(tmp)
+    fs.renameSync(sessionDir, targetDir)
+    moved = true
+    fs.writeFileSync(tmp, next)
+    fs.renameSync(tmp, targetFile)
+  } catch (e) {
+    try { if (fs.existsSync(tmp)) fs.unlinkSync(tmp) } catch {}
+    if (moved) { try { fs.renameSync(targetDir, sessionDir) } catch {} }
+    throw new Error(`${e.code || ''} ${e.message}`.trim())
   }
   return { ok: true, id: header.id, bytes: buf.length }
 }
