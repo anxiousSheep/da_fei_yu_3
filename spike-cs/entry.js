@@ -22,7 +22,6 @@ group.add(head, body); scene.add(group);
 
 const _v = new THREE.Vector3();
 
-// 投影单个 mesh 的几何 AABB 8 角（applyMatrixWorld）→ 最紧屏幕轮廓
 function meshBBox(mesh){
   mesh.geometry.computeBoundingBox();
   const b = mesh.geometry.boundingBox;
@@ -37,7 +36,6 @@ function meshBBox(mesh){
   }
   return { mnx, mny, mxx, mxy };
 }
-
 function hitRect(){
   const a = meshBBox(body), h = meshBBox(head);
   const left = Math.min(a.mnx, h.mnx), top = Math.min(a.mny, h.mny);
@@ -45,32 +43,45 @@ function hitRect(){
   return { left:Math.floor(left), top:Math.floor(top), right:Math.ceil(right), bottom:Math.ceil(bottom) };
 }
 
-// 诊断：读回画布实际非透明像素包围盒（物理 px → CSS px）
-function actualBbox(){
+function toBase64(bytes){
+  let s = '';
+  for(let i=0;i<bytes.length;i+=8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i+8192));
+  return btoa(s);
+}
+
+const MASK_SCALE = 2; // 每采样覆盖的物理像素
+function reportMask(){
+  const hr = hitRect();
+  const dpr = devicePixelRatio;
   const c = document.createElement('canvas');
   c.width = renderer.domElement.width;
   c.height = renderer.domElement.height;
   const ctx = c.getContext('2d');
   ctx.drawImage(renderer.domElement, 0, 0);
   const data = ctx.getImageData(0, 0, c.width, c.height).data;
-  let mnx=1e9,mny=1e9,mxx=-1e9,mxy=-1e9;
-  for(let y=0;y<c.height;y++) for(let x=0;x<c.width;x++){
-    if(data[(y*c.width+x)*4+3] > 8){ if(x<mnx)mnx=x; if(x>mxx)mxx=x; if(y<mny)mny=y; if(y>mxy)mxy=y; }
+
+  const bx = Math.floor(hr.left * dpr), by = Math.floor(hr.top * dpr);
+  const bw = Math.ceil((hr.right - hr.left) * dpr), bh = Math.ceil((hr.bottom - hr.top) * dpr);
+  const mw = Math.max(1, Math.ceil(bw / MASK_SCALE)), mh = Math.max(1, Math.ceil(bh / MASK_SCALE));
+  const mask = new Uint8Array(mw * mh);
+  for(let my=0; my<mh; my++){
+    for(let mx=0; mx<mw; mx++){
+      let a = 0;
+      for(let sy=0; sy<MASK_SCALE; sy++){
+        const py = by + my*MASK_SCALE + sy; if(py >= c.height) break;
+        for(let sx=0; sx<MASK_SCALE; sx++){
+          const px = bx + mx*MASK_SCALE + sx; if(px >= c.width) break;
+          const v = data[(py*c.width + px)*4 + 3];
+          if(v > a) a = v;
+        }
+      }
+      mask[my*mw + mx] = a > 8 ? 255 : 0;
+    }
   }
-  if(mnx>mxx) return null;
-  return { left:mnx/devicePixelRatio, top:mny/devicePixelRatio, right:mxx/devicePixelRatio, bottom:mxy/devicePixelRatio };
+  post({ type:'mask', mask: toBase64(mask), mw: mw, mh: mh, x: hr.left, y: hr.top, w: hr.right - hr.left, h: hr.bottom - hr.top });
 }
 
 function loop(){ requestAnimationFrame(loop); group.rotation.y += 0.005; renderer.render(scene, camera); }
 loop();
-
-// 一次诊断：投影命中框 vs 实际像素包围盒
-setTimeout(function(){
-  const hr = hitRect();
-  const ab = actualBbox();
-  post({ type:'err', msg:'DIAG projected=' + JSON.stringify(hr) + ' actual=' + JSON.stringify(ab) });
-}, 900);
-
-// 持续上报命中框（给 clickCatcher 用）
-setInterval(function(){ const r = hitRect(); post({ type:'hit', left:r.left, top:r.top, right:r.right, bottom:r.bottom, dpr:devicePixelRatio }); }, 300);
-post({ type:'err', msg:'THREE-BUNDLE-RAN-OK' });
+setInterval(reportMask, 200);
+post({ type:'err', msg:'MASK-MODE-RAN-OK' });

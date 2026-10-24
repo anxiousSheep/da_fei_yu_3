@@ -71,4 +71,4 @@ S2 的程序化证据（真实点击，非 SendMessage 直调窗口过程）：
 
 - 拖拽、多屏 DPI、全屏检测等 W1 后续项（托盘/穿透已完成）。
 - **three.js 集成（W2）**：✅ 已用 esbuild 打成单个 IIFE 包（`npx esbuild entry.js --bundle --format=iife --outfile=bundle.js`，1.1MB，199ms），绕开 ES 模块加载器，在 WebView2 中成功加载渲染（`THREE-BUNDLE-RAN-OK` + 角色屏幕包围盒上报）。`bundle.js` 为构建产物已 gitignore；`three.core.js`/three.module.js 为 vendored three.js（MIT）。剩余：three-vrm 加载 VRM、逐像素穿透（见上文方案）、性能基线。
-- **逐像素穿透（W2）**：换 VRM 后按上文「逐像素命中方案」实现，替换 clickCatcher。
+- **逐像素穿透**：✅ 已实现——JS 读回画布 alpha 生成降采样二进制掩码（base64）→ C# Pbgra32 ImageBrush OpacityMask 驱动 `#01000000` Rectangle 的分层 alpha。验证：头部球体透明角落穿透、身体中心接住。随 three-vrm 换 VRM 时掩码生成逻辑不变，仅角色网格替换。

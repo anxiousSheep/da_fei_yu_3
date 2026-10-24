@@ -7,7 +7,7 @@
         Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize">
     <Grid>
         <wv2:WebView2 x:Name="webView" />
-        <!-- 角色命中区：alpha=1 让 OS 在这里接住点击，其余区域 alpha=0 穿透。圆角匹配角色形状 -->
-        <Border x:Name="clickCatcher" Background="#01000000" CornerRadius="18" HorizontalAlignment="Left" VerticalAlignment="Top" Width="0" Height="0" />
+        <!-- 角色命中区：Fill=#01000000（alpha=1，肉眼不可见但让 OS 接住）+ 逐像素 OpacityMask -->
+        <Rectangle x:Name="clickCatcher" Fill="#01000000" HorizontalAlignment="Left" VerticalAlignment="Top" Width="0" Height="0" />
     </Grid>
 </Window>
