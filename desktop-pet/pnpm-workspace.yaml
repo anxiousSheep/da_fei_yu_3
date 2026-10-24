@@ -1,0 +1,6 @@
+# pnpm 12 把构建脚本审批设置放在这里。
+# electron 的 postinstall 负责下载二进制，必须放行；
+# electron-winstaller（Squirrel 安装器，本项目用 NSIS）显式不放行。
+allowBuilds:
+  electron: true
+  electron-winstaller: false

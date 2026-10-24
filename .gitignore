@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+bin/
+obj/
+.env*
+*.log
+*.png
+.tmp*
+test/__artifacts__/
