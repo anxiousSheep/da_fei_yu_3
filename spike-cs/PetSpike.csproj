@@ -15,8 +15,7 @@
 
   <ItemGroup>
     <None Update="index.html"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
-    <None Update="three.core.global.js"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
-    <None Update="three.module.global.js"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Update="bundle.js"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
   </ItemGroup>
 
   <ItemGroup>

@@ -1,21 +1,7 @@
 <!doctype html>
 <html>
-<head>
-<meta charset="utf-8" />
-<style>html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden}</style>
-</head>
+<head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden}canvas{display:block}</style></head>
 <body>
-<!-- W1 占位角色：一个圆角色块。W2 换成 three.js + VRM（需先解决 ES 模块加载，见技术栈变更文档） -->
-<div id="pet" style="position:absolute;width:160px;height:220px;background:#4a90e2;border-radius:18px;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
-<script>
-function post(m){ try{ chrome.webview.postMessage(m); }catch(e){ console.error(e); } }
-function report(){
-  const el = document.getElementById('pet');
-  const r = el.getBoundingClientRect();
-  post({ type:'hit', left:r.left, top:r.top, right:r.right, bottom:r.bottom, dpr:window.devicePixelRatio });
-}
-report();
-setInterval(report, 300);
-</script>
+<script src="./bundle.js"></script>
 </body>
 </html>

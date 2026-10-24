@@ -70,5 +70,5 @@ S2 的程序化证据（真实点击，非 SendMessage 直调窗口过程）：
 ## 待办
 
 - 拖拽、多屏 DPI、全屏检测等 W1 后续项（托盘/穿透已完成）。
-- **three.js 集成（W2）**：本机实测 WebView2 的 ES 模块加载器对 three.js 失败——`fetch('./three.module.js')` 返回 200/text/javascript，但 `import()` 报「Failed to fetch dynamically imported module」；微型模块与 700KB 填充模块都能正常 import。根因：three r186 的 `three.module.js` 不是自包含的，它 `import ... from './three.core.js'`（1.4MB），嵌套模块加载失败。W2 用打包器（esbuild/vite）把 three 打成单个 classic script，绕开模块加载器。W1 已用 div 占位角色。
+- **three.js 集成（W2）**：✅ 已用 esbuild 打成单个 IIFE 包（`npx esbuild entry.js --bundle --format=iife --outfile=bundle.js`，1.1MB，199ms），绕开 ES 模块加载器，在 WebView2 中成功加载渲染（`THREE-BUNDLE-RAN-OK` + 角色屏幕包围盒上报）。`bundle.js` 为构建产物已 gitignore；`three.core.js`/three.module.js 为 vendored three.js（MIT）。剩余：three-vrm 加载 VRM、逐像素穿透（见上文方案）、性能基线。
 - **逐像素穿透（W2）**：换 VRM 后按上文「逐像素命中方案」实现，替换 clickCatcher。
