@@ -55,5 +55,5 @@ S2 的两条程序化证据：
 
 ## 待办
 
-- 正式项目结构（如 `desktop-pet-cs/`），把 spike 的 MainWindow 逻辑落进去。
-- 拖拽、托盘、多屏 DPI、全屏检测等 W1 后续项。
+- 拖拽、多屏 DPI、全屏检测等 W1 后续项（托盘/穿透已完成）。
+- **three.js 集成（W2）**：本机实测 WebView2 的 ES 模块加载器对 three.js 失败——`fetch('./three.module.js')` 返回 200/text/javascript，但 `import()` 报「Failed to fetch dynamically imported module」；微型模块与 700KB 填充模块都能正常 import。根因：three r186 的 `three.module.js` 不是自包含的，它 `import ... from './three.core.js'`（1.4MB），嵌套模块加载失败。W2 用打包器（esbuild/vite）把 three 打成单个 classic script，绕开模块加载器。W1 已用 div 占位角色。

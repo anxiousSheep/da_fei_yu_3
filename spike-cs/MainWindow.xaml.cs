@@ -7,6 +7,9 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
 using Microsoft.Web.WebView2.Core;
+using Kujira.Core;
+using WinForms = System.Windows.Forms;
+using Drawing = System.Drawing;
 
 namespace PetSpike;
 
@@ -16,6 +19,8 @@ public partial class MainWindow : Window
     private double _dpr = 1.0;
     private double _left, _top, _right, _bottom = -1;
     private readonly HashSet<IntPtr> _done = new();
+    private bool _clickThrough = true;
+    private WinForms.NotifyIcon? _tray;
 
     private void Log(string msg)
     {
@@ -30,7 +35,6 @@ public partial class MainWindow : Window
     private const int WS_EX_TRANSPARENT = 0x20;
 
     [StructLayout(LayoutKind.Sequential)] private struct POINT { public int x, y; }
-
     private delegate bool EnumProc(IntPtr h, IntPtr l);
     private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
@@ -41,7 +45,7 @@ public partial class MainWindow : Window
     [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, EnumProc cb, IntPtr l);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr h, StringBuilder s, int m);
 
-    private WndProcDelegate _wndProc;
+    private WndProcDelegate? _wndProc;
     private IntPtr _topHwnd;
     private IntPtr _prevTop;
 
@@ -52,22 +56,21 @@ public partial class MainWindow : Window
         Log("ctor");
     }
 
-    // 顶层窗口：命中区返回 HTCLIENT，透明区返回 HTTRANSPARENT（穿透到下层窗口）
     private IntPtr TopProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         if (msg == WM_NCHITTEST)
         {
+            if (!_clickThrough) return (IntPtr)HTCLIENT; // 穿透关闭：整窗可交互
             short sx = (short)((long)lParam & 0xFFFF);
             short sy = (short)(((long)lParam >> 16) & 0xFFFF);
             var p = new POINT { x = sx, y = sy };
             ScreenToClient(hWnd, ref p);
-            bool hit = (_right >= 0) && (p.x >= _left * _dpr) && (p.x <= _right * _dpr) && (p.y >= _top * _dpr) && (p.y <= _bottom * _dpr);
+            bool hit = HitTest.Contains(new HitRect(_left, _top, _right, _bottom), p.x, p.y, _dpr);
             return (IntPtr)(hit ? HTCLIENT : HTTRANSPARENT);
         }
         return CallWindowProc(_prevTop, hWnd, msg, wParam, lParam);
     }
 
-    // 给 Chromium 内容窗口设 WS_EX_TRANSPARENT，让它们穿透到顶层窗口
     private void MakeTransparent(IntPtr parent)
     {
         EnumChildWindows(parent, (h, l) =>
@@ -87,6 +90,26 @@ public partial class MainWindow : Window
             MakeTransparent(h);
             return true;
         }, IntPtr.Zero);
+    }
+
+    private void SetupTray()
+    {
+        _tray = new WinForms.NotifyIcon
+        {
+            Icon = Drawing.SystemIcons.Application,
+            Text = "Project Kujira 桌宠",
+            Visible = true
+        };
+        var menu = new WinForms.ContextMenuStrip();
+        menu.Items.Add("显示 / 隐藏", null, (_, _) => { if (IsVisible) Hide(); else Show(); });
+        var ct = new WinForms.ToolStripMenuItem("点击穿透") { Checked = _clickThrough, CheckOnClick = true };
+        ct.CheckedChanged += (_, _) => { _clickThrough = ct.Checked; Log("clickThrough=" + _clickThrough); };
+        menu.Items.Add(ct);
+        menu.Items.Add(new WinForms.ToolStripSeparator());
+        menu.Items.Add("退出", null, (_, _) => { if (_tray != null) _tray.Visible = false; System.Windows.Application.Current.Shutdown(); });
+        _tray.ContextMenuStrip = menu;
+        _tray.DoubleClick += (_, _) => { if (IsVisible) Hide(); else Show(); };
+        Log("tray ready");
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -122,8 +145,10 @@ public partial class MainWindow : Window
 
             _topHwnd = new WindowInteropHelper(this).Handle;
             _wndProc = TopProc;
-            _prevTop = SetWindowLongPtr(_topHwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
-            Log("subclassed TOP hwnd=" + _topHwnd + " prev=" + _prevTop);
+            _prevTop = SetWindowLongPtr(_topHwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc!));
+            Log("subclassed TOP hwnd=" + _topHwnd);
+
+            SetupTray();
 
             var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             timer.Tick += (s2, e2) => MakeTransparent(_topHwnd);
