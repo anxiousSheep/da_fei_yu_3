@@ -69,6 +69,7 @@ public partial class MainWindow : Window
             var env = await CoreWebView2Environment.CreateAsync();
             await webView.EnsureCoreWebView2Async(env);
             webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
+            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
 
             var folder = AppDomain.CurrentDomain.BaseDirectory;
             webView.CoreWebView2.SetVirtualHostNameToFolderMapping("app.local", folder, CoreWebView2HostResourceAccessKind.DenyCors);
